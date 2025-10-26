@@ -305,19 +305,25 @@
         }
 
         .combo-effect {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 48px;
             font-weight: bold;
             color: #52b788;
-            text-shadow: 0 0 20px rgba(82, 183, 136, 0.8),
-                         0 0 40px rgba(82, 183, 136, 0.4);
+            background: rgba(10, 15, 25, 0.85);
+            padding: 20px 40px;
+            border-radius: 15px;
+            text-shadow: 0 0 20px rgba(82, 183, 136, 1),
+                         0 0 40px rgba(82, 183, 136, 0.8);
             pointer-events: none;
             animation: comboAnim 1.2s ease-out forwards;
-            z-index: 100;
+            z-index: 2000;
             letter-spacing: 3px;
+            border: 2px solid rgba(82, 183, 136, 0.5);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8),
+                        0 0 20px rgba(82, 183, 136, 0.3);
         }
 
         @keyframes comboAnim {
@@ -559,10 +565,19 @@
             while (attempts < maxAttempts) {
                 attempts++;
                 const pieces = [];
-                const difficultyLevels = ['easy', 'medium', 'hard'];
                 
                 for (let i = 0; i < 3; i++) {
-                    const difficulty = difficultyLevels[Math.floor(Math.random() * difficultyLevels.length)];
+                    // Tỷ lệ: Easy 15%, Medium 35%, Hard 50%
+                    const rand = Math.random();
+                    let difficulty;
+                    if (rand < 0.15) {
+                        difficulty = 'easy';
+                    } else if (rand < 0.50) {
+                        difficulty = 'medium';
+                    } else {
+                        difficulty = 'hard';
+                    }
+                    
                     const shapeList = SHAPES[difficulty];
                     const shape = shapeList[Math.floor(Math.random() * shapeList.length)];
                     const color = TETRIS_COLORS[Math.floor(Math.random() * TETRIS_COLORS.length)];
@@ -906,7 +921,7 @@
             effect.textContent = combo.text;
             effect.style.color = combo.color;
             
-            document.querySelector('.grid-container').appendChild(effect);
+            document.body.appendChild(effect);
             
             setTimeout(() => effect.remove(), 1200);
         }
