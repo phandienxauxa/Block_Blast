@@ -217,7 +217,6 @@
             transition: none;
         }
 
-        /* Di động: khối gạch nhảy lên trên ngón tay */
         .dragging-piece.mobile-offset {
             transform: translate(-50%, calc(-50% - 80px)) scale(1.2);
         }
@@ -349,7 +348,6 @@
             letter-spacing: 1px;
         }
 
-        /* Tetris color palette - muted tones */
         .color-cyan { background: #2a9d8f; }
         .color-blue { background: #457b9d; }
         .color-orange { background: #e76f51; }
@@ -422,13 +420,8 @@
     <script>
         const GRID_SIZE = 8;
         const TETRIS_COLORS = [
-            '#2a9d8f', // Cyan
-            '#457b9d', // Blue
-            '#e76f51', // Orange
-            '#e9c46a', // Yellow
-            '#52b788', // Green
-            '#7209b7', // Purple
-            '#d62828'  // Red
+            '#2a9d8f', '#457b9d', '#e76f51', '#e9c46a', 
+            '#52b788', '#7209b7', '#d62828'
         ];
 
         const SHAPES = {
@@ -474,7 +467,6 @@
             isMobile: false
         };
 
-        // Phát hiện thiết bị di động
         function detectMobile() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                 || ('ontouchstart' in window);
@@ -652,7 +644,6 @@
             const pieceEl = createPieceElement(game.draggingPiece);
             pieceEl.className = 'piece dragging-piece';
             
-            // Thêm class mobile-offset nếu đang trên di động
             if (game.isMobile) {
                 pieceEl.classList.add('mobile-offset');
             }
@@ -692,6 +683,11 @@
             const gridEl = document.getElementById('grid');
             const rect = gridEl.getBoundingClientRect();
             
+            // Nếu là mobile, offset Y lên trên để khớp với vị trí khối gạch hiển thị
+            if (game.isMobile) {
+                y = y - 80;
+            }
+            
             if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
                 clearPreview();
                 return;
@@ -706,7 +702,6 @@
             const valid = canPlace(game.draggingPiece.shape, row, col);
             const cells = document.querySelectorAll('.cell');
             
-            // Hiển thị preview khối gạch
             game.draggingPiece.shape.forEach((shapeRow, r) => {
                 shapeRow.forEach((cell, c) => {
                     if (cell) {
@@ -723,7 +718,6 @@
                 });
             });
 
-            // Hiệu ứng highlight các hàng/cột sẽ bị xóa
             if (valid) {
                 highlightWillClearLines(row, col);
             }
@@ -732,7 +726,6 @@
         function highlightWillClearLines(row, col) {
             const tempGrid = game.grid.map(r => [...r]);
             
-            // Giả lập đặt khối
             game.draggingPiece.shape.forEach((shapeRow, r) => {
                 shapeRow.forEach((cell, c) => {
                     if (cell) {
@@ -747,7 +740,6 @@
 
             const cells = document.querySelectorAll('.cell');
             
-            // Kiểm tra hàng ngang
             for (let r = 0; r < GRID_SIZE; r++) {
                 if (tempGrid[r].every(cell => cell)) {
                     for (let c = 0; c < GRID_SIZE; c++) {
@@ -756,7 +748,6 @@
                 }
             }
             
-            // Kiểm tra cột dọc
             for (let c = 0; c < GRID_SIZE; c++) {
                 if (tempGrid.every(row => row[c])) {
                     for (let r = 0; r < GRID_SIZE; r++) {
@@ -789,6 +780,11 @@
         function tryPlacePiece(x, y) {
             const gridEl = document.getElementById('grid');
             const rect = gridEl.getBoundingClientRect();
+            
+            // Offset Y cho mobile khi tính vị trí đặt
+            if (game.isMobile) {
+                y = y - 80;
+            }
             
             const cellSize = rect.width / GRID_SIZE;
             const col = Math.floor((x - rect.left) / cellSize);
@@ -946,7 +942,6 @@
             drawPieces();
         }
 
-        // Khởi tạo game
         initGrid();
         game.pieces = generateSmartPieces();
         drawGrid();
