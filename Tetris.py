@@ -1,8 +1,3 @@
-# Author:   Thai Duc Thien
-# Date:     25.10.2025
-# Purpose:  Lam cho vui ^^
-
-
 import pygame
 import random
 import sys
@@ -28,7 +23,7 @@ COLORS = [
     (255, 159, 243),  # Hồng
 ]
 
-# Màu nền đặc biệt khi clear toàn bộ grid (màu sáng, không u ám)
+# Màu nền đặc biệt khi clear toàn bộ grid 
 SPECIAL_BG_COLORS = [
     (255, 240, 245),  # Hồng pastel
     (240, 255, 240),  # Xanh lá pastel
@@ -40,14 +35,14 @@ SPECIAL_BG_COLORS = [
     (255, 245, 238),  # Đào pastel
 ]
 
-# Cài đặt màn hình - GIỮ NGUYÊN KÍCH THƯỚC CŨ
+# Cài đặt màn hình 
 CELL_SIZE = 45
 GRID_SIZE = 8
 MARGIN = 4
 SCREEN_WIDTH = GRID_SIZE * (CELL_SIZE + MARGIN) + MARGIN + 40
 SCREEN_HEIGHT = GRID_SIZE * (CELL_SIZE + MARGIN) + MARGIN + 380
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Block Blast")
+pygame.display.set_caption("Block Blast - Smart Edition")
 
 # Font
 title_font = pygame.font.Font(None, 48)
@@ -57,42 +52,50 @@ combo_font = pygame.font.Font(None, 72)
 
 # Các brick - Phân loại theo độ khó
 SHAPES_EASY = [
-    [[1]],              
-    [[1, 1]],           
-    [[1], [1]],         
+    [[1]],                          # chỉ là một ô gạch
+    [[1, 1]],                       # thanh ngang 2 ô
+    [[1], [1]],                     # thanh dọc 2 ô
 ]
 
 SHAPES_MEDIUM = [
-    [[1, 1, 1]],        
-    [[1], [1], [1]],    
-    [[1, 1], [1, 1]],   
-    [[1, 0], [1, 1]], 
-    [[1, 1], [1, 0]],
-    [[1, 1], [0, 1]],
-    [[1, 1, 1], [1, 0, 0]],  
-    [[1, 1, 1], [0, 0, 1]],
+    [[1, 1, 1]],                    # thanh ngang 3 ô
+    [[1], [1], [1]],                # thanh dọc 3 ô
+    [[1, 1], [1, 1]],               # ô vuông 2x2
+    [[1, 0], [1, 1]],               # chữ L ngắn
+    [[1, 1], [1, 0]],               # chữ L ngắn ngược
+    [[1, 1], [0, 1]],               # chữ L ngắn ngược ngược
+    [[1, 1, 1], [1, 0, 0]],         # chữ L dài
+    [[1, 0, 0], [1, 1, 1]],         # chữ L dài ngược 
+    [[1, 1, 1], [0, 0, 1]],         # chữ L dài ngược 1
+    [[0, 1], [0, 1], [1, 1]],       # chữ L dài chuẩn
+    [[1, 0], [1, 0], [1, 1]],       # chữ L dài chuẩn 1
+    [[1, 1], [1, 0], [1, 0]],       # chữ L dài chuẩn ngược
 ]
 
 SHAPES_HARD = [
-    [[1, 1, 1, 1]],    
-    [[1], [1], [1], [1]],  
-    [[1, 1, 1], [0, 1, 0]],  
-    [[0, 1, 0], [1, 1, 1]],  
-    [[1, 1, 0], [0, 1, 1]],  
-    [[1, 1, 1], [1, 1, 1]], 
-    [[0, 1, 1], [1, 1, 0]],  
-    [[1, 1, 1], [1, 0, 0], [1, 0, 0]],  
-    [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+    [[1, 1, 1, 1]],                         # thanh dài 4 ô
+    [[1], [1], [1], [1]],                   # thanh dọc 4 ô
+    [[1, 1, 1], [0, 1, 0]],                 # tam giác hướng dưới
+    [[0, 1, 0], [1, 1, 1]],                 # tam giác hướng lên
+    [[0, 1], [1, 1], [0, 1]],               # tam giác bên trái
+    [[1, 1, 0], [0, 1, 1]],                 # bậc thang bên trái
+    [[0, 1, 1], [1, 1, 0]],                 # bậc thang bên phải
+    [[1, 0], [1, 1], [0, 1]],               # bậc thang hướng lên trên
+    [[0, 1], [1, 1], [1, 0]],               # bậc thang hướng lên trên ngược
+    [[1, 1, 1], [1, 1, 1]],                 # hình chữ nhật 2x3
+    [[1, 1], [1, 1], [1, 1]],               # hình chữ nhật 2x3 dựng đứng
+    [[1, 1, 1], [1, 0, 0], [1, 0, 0]],      # chữ L siêu dài ngược
+    [[1, 1, 1], [0, 0, 1], [0, 0, 1]],      # chữ L siêu dài ngược ngược
 ]
 
 SHAPES_VERY_HARD = [
-    [[1, 1, 1, 1, 1]],        
-    [[1], [1], [1], [1], [1]],    
-    [[1, 0], [0, 1]],   
-    [[0, 1], [1, 0]],
-    [[1, 1, 1], [1, 1, 1], [1, 1, 1]],  
-    [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-    [[0, 0, 1], [0, 1, 0], [1, 0, 0]],
+    [[1, 1, 1, 1, 1]],                      # thanh dài 5 ô
+    [[1], [1], [1], [1], [1]],              # thanh dọc 5 ô
+    [[1, 0], [0, 1]],                       # chéo trái
+    [[0, 1], [1, 0]],                       # chéo phải
+    [[1, 1, 1], [1, 1, 1], [1, 1, 1]],      # ô vuông 3x3
+    [[1, 0, 0], [0, 1, 0], [0, 0, 1]],      # chéo trái dài 
+    [[0, 0, 1], [0, 1, 0], [1, 0, 0]],      # chéo phải dài
 ]
 
 # Gộp tất cả shapes
@@ -163,7 +166,6 @@ class ComboEffect:
 class BlockBlastGame:
     def __init__(self, highest_score=0):
         self.grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-        # self.initialize_random_blocks()
         self.score = 0
         self.highest_score = highest_score
         self.available_pieces = []
@@ -179,15 +181,6 @@ class BlockBlastGame:
         self.combo_effects = []
         self.current_bg_color = BG_COLOR  
         self.generate_new_pieces()
-    
-    def initialize_random_blocks(self):
-        """Tạo các ô gạch ngẫu nhiên khi bắt đầu game"""
-        num_blocks = random.randint(10, 15)
-        all_positions = [(r, c) for r in range(GRID_SIZE) for c in range(GRID_SIZE)]
-        selected_positions = random.sample(all_positions, num_blocks)
-        
-        for row, col in selected_positions:
-            self.grid[row][col] = random.choice(COLORS)
     
     def is_grid_empty(self):
         """Kiểm tra xem grid có hoàn toàn trống không"""
@@ -242,10 +235,42 @@ class BlockBlastGame:
         """Đếm số ô của một khối"""
         return sum(sum(row) for row in shape)   
     
+    def can_place_on_grid(self, shape, row, col, grid):
+        """Kiểm tra có thể đặt khối vào grid cụ thể không (dùng cho thuật toán)"""
+        for r, row_data in enumerate(shape):
+            for c, cell in enumerate(row_data):
+                if cell:
+                    new_r, new_c = row + r, col + c
+                    if new_r < 0 or new_r >= GRID_SIZE or new_c < 0 or new_c >= GRID_SIZE:
+                        return False
+                    if grid[new_r][new_c]:
+                        return False
+        return True
+    
+    def can_play_with_pieces(self, pieces):
+        """
+        THUẬT TOÁN: 
+        Kiểm tra xem bộ 3 khối có thể chơi được không
+        Trả về True nếu ít nhất 1 khối có thể đặt được vào grid hiện tại
+        """
+        for piece in pieces:
+            for row in range(GRID_SIZE):
+                for col in range(GRID_SIZE):
+                    if self.can_place_on_grid(piece['shape'], row, col, self.grid):
+                        return True  # Tìm được ít nhất 1 nước đi hợp lệ
+        return False  # Không có nước đi nào
+    
     def generate_balanced_pieces(self):
-        pieces = []
+        """
+        Tạo bộ 3 khối CÓ CHỦ ĐÍCH - đảm bảo luôn có thể chơi được
+        Thuật toán: Thử tạo ngẫu nhiên nhưng validate trước khi trả về
+        """
+        max_attempts = 50  # test 50 lần, k được thì thả ngẫu nhiên r thua
+        attempts = 0
+        
         self.calculate_grid_fullness()
         
+        # Xác định tỷ lệ độ khó dựa trên độ đầy của grid
         if self.grid_fullness < 0.7:
             difficulty_weights = {
                 'easy': 5, 'medium': 20, 'hard': 40, 'very_hard': 35
@@ -259,67 +284,64 @@ class BlockBlastGame:
                 'easy': 13, 'medium': 35, 'hard': 35, 'very_hard': 17
             }
         
+        # Điều chỉnh nếu liên tục cho khối khó
         if self.consecutive_hard_pieces >= 2:
             difficulty_weights['easy'] += 20
             difficulty_weights['medium'] += 10
             difficulty_weights['hard'] = max(10, difficulty_weights['hard'] - 15)
             difficulty_weights['very_hard'] = max(5, difficulty_weights['very_hard'] - 5)
         
-        total_size = 0
-        hard_count = 0
+        while attempts < max_attempts:
+            attempts += 1
+            pieces = []
+            hard_count = 0
+            
+            # Tạo 3 khối ngẫu nhiên
+            for i in range(3):
+                difficulties = list(difficulty_weights.keys())
+                weights = list(difficulty_weights.values())
+                difficulty = random.choices(difficulties, weights=weights, k=1)[0]
+                
+                if difficulty == 'very_hard' and hard_count >= 1:
+                    difficulty = random.choice(['medium', 'hard'])
+                
+                shape = random.choice(ALL_SHAPES[difficulty])
+                color = random.choice(COLORS)
+                
+                shape_size = self.get_shape_size(shape)
+                if difficulty in ['hard', 'very_hard']:
+                    hard_count += 1
+                
+                pieces.append({
+                    'shape': shape,
+                    'color': color,
+                    'difficulty': difficulty,
+                    'size': shape_size
+                })
+            
+            # KIỂM TRA THÔNG MINH: Bộ 3 này có thể chơi được không?
+            if self.can_play_with_pieces(pieces):
+                self.consecutive_hard_pieces = hard_count
+                return pieces
         
-        for i in range(3):
-            difficulties = list(difficulty_weights.keys())
-            weights = list(difficulty_weights.values())
-            difficulty = random.choices(difficulties, weights=weights, k=1)[0]
-            
-            if difficulty == 'very_hard' and hard_count >= 1:
-                difficulty = random.choice(['medium', 'hard'])
-            
-            shape = random.choice(ALL_SHAPES[difficulty])
-            color = random.choice(COLORS)
-            
-            shape_size = self.get_shape_size(shape)
-            total_size += shape_size
-            if difficulty in ['hard', 'very_hard']:
-                hard_count += 1
-            
-            pieces.append({
-                'shape': shape,
-                'color': color,
-                'difficulty': difficulty,
-                'size': shape_size
-            })
-        
-        has_small_piece = any(p['difficulty'] in ['easy', 'medium'] for p in pieces)
-        if not has_small_piece:
-            pieces[2] = {
-                'shape': random.choice(SHAPES_EASY + SHAPES_MEDIUM),
+        # Nếu sau 50 lần không tìm được bộ tốt, trả về bộ an toàn (easy)
+        return [
+            {
+                'shape': random.choice(SHAPES_EASY),
                 'color': random.choice(COLORS),
                 'difficulty': 'easy',
-                'size': self.get_shape_size(pieces[2]['shape'])
-            }
-        
-        self.consecutive_hard_pieces = hard_count
-        
-        return pieces
+                'size': 1
+            } for _ in range(3)
+        ]
     
     def generate_new_pieces(self):
-        """Tạo 3 khối mới""" 
+        """Tạo 3 khối mới với thuật toán thông minh""" 
         if not self.available_pieces:
             self.available_pieces = self.generate_balanced_pieces()
     
     def can_place(self, shape, row, col):
-        """Kiểm tra có thể đặt khối ko"""
-        for r, row_data in enumerate(shape):
-            for c, cell in enumerate(row_data):
-                if cell:
-                    new_r, new_c = row + r, col + c
-                    if new_r < 0 or new_r >= GRID_SIZE or new_c < 0 or new_c >= GRID_SIZE:
-                        return False
-                    if self.grid[new_r][new_c]:
-                        return False
-        return True
+        """Kiểm tra có thể đặt khối ko (dùng cho gameplay thực tế)"""
+        return self.can_place_on_grid(shape, row, col, self.grid)
     
     def get_lines_to_clear_if_placed(self, shape, row, col):
         """Tính toán các hàng/cột sẽ bị xóa nếu đặt khối tại vị trí này"""
@@ -386,13 +408,8 @@ class BlockBlastGame:
             self.change_background_color()
     
     def has_valid_moves(self):
-        """Kiểm tra còn nước đi hợp lệ ko"""
-        for piece in self.available_pieces:
-            for r in range(GRID_SIZE):
-                for c in range(GRID_SIZE):
-                    if self.can_place(piece['shape'], r, c):
-                        return True
-        return False
+        """Kiểm tra còn nước đi hợp lệ ko (dùng thuật toán thông minh)"""
+        return self.can_play_with_pieces(self.available_pieces)
     
     def draw_grid(self):
         grid_x = (SCREEN_WIDTH - (GRID_SIZE * (CELL_SIZE + MARGIN) + MARGIN)) // 2
@@ -691,8 +708,10 @@ def main():
                         game.preview_pos = None
                         game.highlighted_lines = {'rows': [], 'cols': []}
                         
+                        # Tạo khối mới với thuật toán thông minh
                         game.generate_new_pieces()
                         
+                        # Kiểm tra game over bằng thuật toán thông minh
                         if not game.has_valid_moves():
                             if game.score > highest_score:
                                 highest_score = game.score
