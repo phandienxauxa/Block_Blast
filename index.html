@@ -1,473 +1,1052 @@
-# =====================================================
-# Block Blast Game - ESP32 ILI9341 Parallel Version
-# Using HughMaingauche's Python Parallel Driver
-# =====================================================
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Block Blast - Minimalist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-from machine import Pin, SPI
-import ILI9341       # Parallel display driver (includes char methods)
-import xpt2046       # Touch driver
-import time
-import urandom as random
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            color: #999;
+            touch-action: pan-y;
+        }
 
-# =====================================================
-# HARDWARE CONFIGURATION
-# =====================================================
+        .game-container {
+            background: #111;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 480px;
+            width: 100%;
+            border: 1px solid #1a1a1a;
+        }
 
-# Display Pins - Parallel 8-bit Interface
-PIN_D0 = 12
-PIN_D1 = 13
-PIN_D2 = 26
-PIN_D3 = 25
-PIN_D4 = 17
-PIN_D5 = 16
-PIN_D6 = 27
-PIN_D7 = 14
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
 
-# Display Control Pins
-PIN_LCD_CS = 33   # Chip Select
-PIN_LCD_RS = 32   # Register Select (DC)
-PIN_LCD_WR = 4    # Write
-PIN_LCD_RD = 2    # Read
-PIN_LCD_RST = 22  # Reset
-PIN_LCD_BL = 21   # Backlight (connect to 3V3 for max brightness)
+        .title {
+            font-size: 14px;
+            font-weight: 400;
+            color: #666;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
 
-# Touch Pins - SPI Interface
-PIN_T_SCK = 18
-PIN_T_MOSI = 23
-PIN_T_MISO = 19
-PIN_T_CS = 5
-PIN_T_IRQ = 34    # Touch interrupt (GPIO 34 - input only, safer than 35)
+        .scores {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+        }
 
-# Display Settings
-SCREEN_WIDTH = 320
-SCREEN_HEIGHT = 240
+        .score-box {
+            text-align: center;
+        }
 
-# Game Settings
-GRID_SIZE = 6
-CELL_SIZE = 28
-GRID_X = 50
-GRID_Y = 45
+        .score-label {
+            font-size: 10px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
 
-PIECE_PREVIEW_Y = 190
-PIECE_PREVIEW_SPACING = 80
-PIECE_BOX_SIZE = 60
-PIECE_PREVIEW_X_START = 30  # Starting X position for pieces
-PIECE_CELL_SIZE = 12        # Size of each cell in piece preview
+        .score-value {
+            font-size: 28px;
+            font-weight: 300;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
 
-# Colors (RGB565 format - 16-bit hex)
-COLOR_WHITE = 0xFFFF
-COLOR_BLACK = 0x0000
-COLOR_GRAY = 0xCE79
-COLOR_DARK_GRAY = 0x632C
-COLOR_BG = 0xF7BE          # Light background
-COLOR_GRID_BG = 0xDEFB     # Grid background
-COLOR_HIGHLIGHT = 0x67E0   # Green highlight
-COLOR_TEXT = 0x0000
-COLOR_RED = 0xF800
+        .grid-container {
+            background: #0a0a0a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 25px;
+            border: 1px solid #1a1a1a;
+        }
 
-# Block Colors (RGB565)
-BLOCK_COLORS = [
-    0xFD2D,  # Red
-    0x07FF,  # Cyan
-    0xFFE0,  # Yellow
-    0x07E0,  # Green
-    0xF81F,  # Magenta
-    0x001F,  # Blue
-    0xFDA0,  # Orange
-    0xFE19,  # Pink
-]
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin: 0 auto;
+            max-width: 400px;
+        }
 
-# =====================================================
-# BLOCK SHAPES
-# =====================================================
+        .cell {
+            aspect-ratio: 1;
+            background: #151515;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
 
-SHAPES_EASY = [
-    [[1]],
-    [[1, 1]],
-    [[1], [1]],
-]
+        .cell.filled {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
 
-SHAPES_MEDIUM = [
-    [[1, 1], [1, 1]],
-    [[1, 1, 1]],
-    [[1], [1], [1]],
-    [[1, 0], [1, 1]],
-    [[0, 1], [1, 1]],
-    [[1, 1], [1, 0]],
-    [[1, 1], [0, 1]],
-]
+        .cell.preview {
+            opacity: 0.5;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
 
-SHAPES_HARD = [
-    [[1, 1, 1, 1]],
-    [[1], [1], [1], [1]],
-    [[1, 1, 1], [1, 0, 0]],
-    [[1, 1, 1], [0, 0, 1]],
-    [[1, 0, 0], [1, 1, 1]],
-    [[0, 0, 1], [1, 1, 1]],
-    [[1, 1, 0], [0, 1, 1]],
-    [[0, 1, 1], [1, 1, 0]],
-]
+        .cell.invalid-preview {
+            opacity: 0.3;
+            background: #2a1515 !important;
+            border: 1px solid rgba(255, 100, 100, 0.2);
+        }
 
-ALL_SHAPES = SHAPES_EASY + SHAPES_MEDIUM + SHAPES_HARD
+        .cell.will-clear {
+            animation: willClearMinimal 1s ease-in-out infinite;
+        }
 
-# =====================================================
-# GAME CLASS
-# =====================================================
+        @keyframes willClearMinimal {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
 
-class BlockBlastGame:
-    def __init__(self):
-        print("Initializing Block Blast (Parallel Version)...")
-        
-        # Initialize Parallel Display - FIX: Pass GPIO numbers, not Pin objects
-        self.display = ILI9341.screen(
-            PIN_LCD_RD,   # Pass GPIO number (2)
-            PIN_LCD_WR,   # Pass GPIO number (4)
-            PIN_LCD_RS,   # Pass GPIO number (32)
-            PIN_LCD_CS,   # Pass GPIO number (33)
-            PIN_LCD_RST,  # Pass GPIO number (22)
-            PIN_D0, PIN_D1, PIN_D2, PIN_D3,
-            PIN_D4, PIN_D5, PIN_D6, PIN_D7
-        )
-        self.display.begin()
-        
-        # Font methods are already imported in ILI9341.screen class
-        # No need to create separate font object
-        print("Display initialized (Parallel 8-bit)")
-        
-        # Initialize Touch (SPI)
-        self.spi_touch = SPI(
-            2,  # HSPI bus
-            baudrate=2000000,
-            sck=Pin(PIN_T_SCK),
-            mosi=Pin(PIN_T_MOSI),
-            miso=Pin(PIN_T_MISO)
-        )
-        
-        self.touch = xpt2046.Touch(
-            spi=self.spi_touch,
-            cs=Pin(PIN_T_CS),
-            int_pin=Pin(PIN_T_IRQ),
-            int_handler=self.touch_handler
-        )
-        
-        print("Touch initialized (SPI)")
-        
-        # Touch state
-        self.touch_x = 0
-        self.touch_y = 0
-        self.touch_pressed = False
-        self.last_touch_time = 0
-        
-        # Game state
-        self.grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-        self.score = 0
-        self.pieces = []
-        self.selected_piece = -1
-        self.game_over = False
-        
-        # Generate initial pieces
-        self.generate_pieces()
-        
-        # Draw initial screen
-        self.draw_all()
-        
-        print("Initialization complete!")
-    
-    def touch_handler(self, x, y):
-        """Interrupt handler for touch events"""
-        self.touch_x = x
-        self.touch_y = y
-        self.touch_pressed = True
-    
-    def generate_pieces(self):
-        """Generate 3 random pieces"""
-        self.pieces = []
-        for _ in range(3):
-            shape = random.choice(ALL_SHAPES)
-            color_idx = random.randint(0, len(BLOCK_COLORS) - 1)
-            self.pieces.append({
-                'shape': shape,
-                'color': BLOCK_COLORS[color_idx],
-                'placed': False
-            })
-    
-    def can_place(self, shape, row, col):
-        """Check if piece can be placed at position"""
-        for r in range(len(shape)):
-            for c in range(len(shape[0])):
-                if shape[r][c]:
-                    grid_r = row + r
-                    grid_c = col + c
-                    if (grid_r < 0 or grid_r >= GRID_SIZE or 
-                        grid_c < 0 or grid_c >= GRID_SIZE or
-                        self.grid[grid_r][grid_c] != 0):
-                        return False
-        return True
-    
-    def place_piece(self, shape, color, row, col):
-        """Place piece on grid"""
-        for r in range(len(shape)):
-            for c in range(len(shape[0])):
-                if shape[r][c]:
-                    self.grid[row + r][col + c] = color
-    
-    def check_lines(self):
-        """Check and clear complete lines"""
-        lines_cleared = 0
-        
-        # Check rows
-        rows_to_clear = []
-        for r in range(GRID_SIZE):
-            if all(self.grid[r][c] != 0 for c in range(GRID_SIZE)):
-                rows_to_clear.append(r)
-        
-        # Check columns
-        cols_to_clear = []
-        for c in range(GRID_SIZE):
-            if all(self.grid[r][c] != 0 for r in range(GRID_SIZE)):
-                cols_to_clear.append(c)
-        
-        # Highlight lines to clear
-        if rows_to_clear or cols_to_clear:
-            for r in rows_to_clear:
-                for c in range(GRID_SIZE):
-                    x = GRID_X + c * CELL_SIZE
-                    y = GRID_Y + r * CELL_SIZE
-                    self.display.fillRect(
-                        x + 1, y + 1, 
-                        CELL_SIZE - 2, CELL_SIZE - 2, 
-                        COLOR_HIGHLIGHT
-                    )
-            
-            for c in cols_to_clear:
-                for r in range(GRID_SIZE):
-                    x = GRID_X + c * CELL_SIZE
-                    y = GRID_Y + r * CELL_SIZE
-                    self.display.fillRect(
-                        x + 1, y + 1,
-                        CELL_SIZE - 2, CELL_SIZE - 2,
-                        COLOR_HIGHLIGHT
-                    )
-            
-            time.sleep_ms(200)  # Show highlight effect
-        
-        # Clear the lines
-        for r in rows_to_clear:
-            for c in range(GRID_SIZE):
-                self.grid[r][c] = 0
-            lines_cleared += 1
-        
-        for c in cols_to_clear:
-            for r in range(GRID_SIZE):
-                self.grid[r][c] = 0
-            lines_cleared += 1
-        
-        return lines_cleared
-    
-    def check_game_over(self):
-        """Check if any piece can be placed"""
-        for piece in self.pieces:
-            if not piece['placed']:
-                shape = piece['shape']
-                for r in range(GRID_SIZE):
-                    for c in range(GRID_SIZE):
-                        if self.can_place(shape, r, c):
-                            return False
-        return True
-    
-    def handle_touch(self, x, y):
-        """Handle touch input"""
-        # Check if touched a piece
-        for i, piece in enumerate(self.pieces):
-            if piece['placed']:
-                continue
-            
-            px = PIECE_PREVIEW_X_START + i * PIECE_PREVIEW_SPACING
-            py = PIECE_PREVIEW_Y
-            
-            if px <= x <= px + PIECE_BOX_SIZE and py <= y <= py + PIECE_BOX_SIZE:
-                self.selected_piece = i
-                self.draw_all()
-                return
-        
-        # Check if touched grid
-        if self.selected_piece >= 0:
-            if GRID_X <= x <= GRID_X + GRID_SIZE * CELL_SIZE and \
-               GRID_Y <= y <= GRID_Y + GRID_SIZE * CELL_SIZE:
+        .cell.highlight {
+            animation: pulseMinimal 0.4s ease-out;
+        }
+
+        @keyframes pulseMinimal {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell.clearing {
+            animation: clearEffect 0.6s ease-out forwards;
+        }
+
+        @keyframes clearEffect {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 0.8;
+                filter: brightness(1.5);
+            }
+            70% {
+                transform: scale(0.8);
+                opacity: 0.4;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        .pieces-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .piece-slot {
+            background: #0a0a0a;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 90px;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: all 0.2s ease;
+            border: 1px solid #1a1a1a;
+            flex: 1;
+        }
+
+        .piece-slot:active {
+            transform: scale(0.95);
+        }
+
+        .piece-slot.dragging {
+            opacity: 0.2;
+        }
+
+        .piece {
+            display: grid;
+            gap: 3px;
+            pointer-events: none;
+        }
+
+        .piece-cell {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            transition: all 0.15s ease;
+        }
+
+        .dragging-piece {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+            opacity: 0.9;
+            transition: none;
+        }
+
+        .dragging-piece.lifted {
+            transform: translate(-50%, calc(-50% - 120px)) scale(1.15);
+        }
+
+        .dragging-piece .piece-cell {
+            width: 22px;
+            height: 22px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: #1a1a1a;
+            color: #999;
+            border: 1px solid #222;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #222;
+            color: #ccc;
+            border-color: #2a2a2a;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .game-over-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .game-over-content {
+            background: #111;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid #1a1a1a;
+        }
+
+        .game-over-title {
+            font-size: 16px;
+            font-weight: 400;
+            color: #666;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .final-score {
+            font-size: 48px;
+            font-weight: 200;
+            color: #fff;
+            margin-bottom: 40px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .combo-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: 300;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 12px;
+            pointer-events: none;
+            animation: comboMinimal 1s ease-out forwards;
+            z-index: 2000;
+            letter-spacing: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes comboMinimal {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -60%) scale(1);
+            }
+            100% {
+                transform: translate(-50%, -70%) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .author {
+            text-align: center;
+            color: #333;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Vibrant color palette - Brighter version */
+        .color-1 { background: #4a7a9e; }
+        .color-2 { background: #5a9e7a; }
+        .color-3 { background: #9e7a5a; }
+        .color-4 { background: #7a5a9e; }
+        .color-5 { background: #9e5a7a; }
+        .color-6 { background: #5a7a9e; }
+        .color-7 { background: #7a9e5a; }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 20px;
+            }
+
+            .piece-cell {
+                width: 16px;
+                height: 16px;
+            }
+
+            .dragging-piece .piece-cell {
+                width: 20px;
+                height: 20px;
+            }
+
+            .dragging-piece.lifted {
+                transform: translate(-50%, calc(-50% - 100px)) scale(1.1);
+            }
+        }
+
+        /* Touch feedback */
+        @media (hover: none) {
+            .piece-slot:active {
+                background: #151515;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="title">Block Blast</div>
+            <div class="scores">
+                <div class="score-box">
+                    <div class="score-label">Best</div>
+                    <div class="score-value" id="highest">0</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">Score</div>
+                    <div class="score-value" id="score">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="grid" id="grid"></div>
+        </div>
+
+        <div class="pieces-container" id="pieces"></div>
+
+        <div class="controls">
+            <button class="btn" onclick="restartGame()">New Game</button>
+        </div>
+
+        <div class="author">
+            Author: Duc Thien khong biet code HTML ^^
+        </div>
+    </div>
+
+
+    <div class="game-over-overlay" id="gameOverOverlay">
+        <div class="game-over-content">
+            <div class="game-over-title">Game Over</div>
+            <div class="final-score" id="finalScore">0</div>
+            <button class="btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 8;
+        const MINIMALIST_COLORS = [
+            '#4a7a9e', // Bright blue-grey
+            '#5a9e7a', // Bright green-grey
+            '#9e7a5a', // Bright brown-grey
+            '#7a5a9e', // Bright purple-grey
+            '#9e5a7a', // Bright rose-grey
+            '#5a7a9e', // Bright steel-grey
+            '#7a9e5a'  // Bright olive-grey
+        ];
+
+        const SHAPES = {
+            easy: [
+                [[1]],
+                [[1, 1]],
+                [[1], [1]]
+            ],
+            medium: [
+                [[1, 1, 1]],
+                [[1], [1], [1]],
+                [[1, 1], [1, 1]],
+                [[1, 0], [1, 1]],
+                [[1, 1], [1, 0]],
+                [[1, 1], [0, 1]],
+                [[1, 1, 1], [1, 0, 0]],
+                [[1, 0, 0], [1, 1, 1]],
+                [[1, 1, 1], [0, 0, 1]],
+                [[0, 1], [0, 1], [1, 1]],
+                [[1, 0], [1, 0], [1, 1]],
+                [[1, 1], [1, 0], [1, 0]],
+            ],
+            hard: [
+                [[1, 1, 1, 1]],
+                [[1], [1], [1], [1]],
+                [[1, 1, 1], [0, 1, 0]],
+                [[0, 1, 0], [1, 1, 1]],
+                [[0, 1], [1, 1], [0, 1]],
+                [[1, 1, 0], [0, 1, 1]],
+                [[0, 1, 1], [1, 1, 0]],
+                [[1, 0], [1, 1], [0, 1]],
+                [[0, 1], [1, 1], [1, 0]],
+                [[1, 1, 1], [1, 1, 1]],
+                [[1, 1], [1, 1], [1, 1]],
+                [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+                [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+                [[1, 1, 1, 1, 1]],
+                [[1], [1], [1], [1], [1]],
+                [[1, 0], [0, 1]],
+                [[0, 1], [1, 0]],
+                [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+            ]
+        };
+
+        const COMBO_MESSAGES = {
+            2: 'NICE',
+            3: 'GREAT',
+            4: 'EXCELLENT',
+            5: 'AMAZING',
+            6: 'INCREDIBLE'
+        };
+
+        let game = {
+            grid: Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null)),
+            score: 0,
+            highest: 0,
+            pieces: [],
+            draggingPiece: null,
+            draggingIndex: -1,
+            dragStartPos: null,
+            pieceOffset: null,
+            isMobile: false
+        };
+
+        function detectMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+                || ('ontouchstart' in window);
+        }
+
+        game.isMobile = detectMobile();
+
+        function initGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function drawGrid() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, i) => {
+                const row = Math.floor(i / GRID_SIZE);
+                const col = i % GRID_SIZE;
+                const value = game.grid[row][col];
                 
-                col = (x - GRID_X) // CELL_SIZE
-                row = (y - GRID_Y) // CELL_SIZE
+                if (value) {
+                    cell.style.background = value;
+                    cell.classList.add('filled');
+                } else {
+                    cell.style.background = '#151515';
+                    cell.classList.remove('filled');
+                }
+                cell.classList.remove('preview', 'invalid-preview', 'highlight');
+            });
+        }
+
+        function canPlace(shape, row, col) {
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c]) {
+                        const newR = row + r;
+                        const newC = col + c;
+                        if (newR < 0 || newR >= GRID_SIZE || newC < 0 || newC >= GRID_SIZE) {
+                            return false;
+                        }
+                        if (game.grid[newR][newC]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function canPlayWithPieces(pieces, grid) {
+            for (let piece of pieces) {
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    for (let col = 0; col < GRID_SIZE; col++) {
+                        if (canPlaceOnGrid(piece.shape, row, col, grid)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function canPlaceOnGrid(shape, row, col, grid) {
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c]) {
+                        const newR = row + r;
+                        const newC = col + c;
+                        if (newR < 0 || newR >= GRID_SIZE || newC < 0 || newC >= GRID_SIZE) {
+                            return false;
+                        }
+                        if (grid[newR][newC]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function generateSmartPieces() {
+            const maxAttempts = 50;
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                attempts++;
+                const pieces = [];
                 
-                piece = self.pieces[self.selected_piece]
-                shape = piece['shape']
-                color = piece['color']
-                
-                if self.can_place(shape, row, col):
-                    # Place the piece
-                    self.place_piece(shape, color, row, col)
-                    piece['placed'] = True
-                    self.selected_piece = -1
+                for (let i = 0; i < 3; i++) {
+                    const rand = Math.random();
+                    let difficulty;
+                    if (rand < 0.15) {
+                        difficulty = 'easy';
+                    } else if (rand < 0.50) {
+                        difficulty = 'medium';
+                    } else {
+                        difficulty = 'hard';
+                    }
                     
-                    # Check and clear lines
-                    lines = self.check_lines()
-                    if lines > 0:
-                        self.score += lines * 10
+                    const shapeList = SHAPES[difficulty];
+                    const shape = shapeList[Math.floor(Math.random() * shapeList.length)];
+                    const color = MINIMALIST_COLORS[Math.floor(Math.random() * MINIMALIST_COLORS.length)];
                     
-                    # Check if all pieces placed
-                    if all(p['placed'] for p in self.pieces):
-                        self.generate_pieces()
+                    pieces.push({ shape: JSON.parse(JSON.stringify(shape)), color, difficulty });
+                }
+                
+                if (canPlayWithPieces(pieces, game.grid)) {
+                    return pieces;
+                }
+            }
+            
+            return [
+                { shape: [[1]], color: MINIMALIST_COLORS[0], difficulty: 'easy' },
+                { shape: [[1, 1]], color: MINIMALIST_COLORS[1], difficulty: 'easy' },
+                { shape: [[1], [1]], color: MINIMALIST_COLORS[2], difficulty: 'easy' }
+            ];
+        }
+
+        function drawPieces() {
+            const container = document.getElementById('pieces');
+            container.innerHTML = '';
+            
+            game.pieces.forEach((piece, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'piece-slot';
+                slot.dataset.index = index;
+                
+                const pieceEl = createPieceElement(piece);
+                slot.appendChild(pieceEl);
+                
+                slot.addEventListener('mousedown', (e) => startDrag(e, index));
+                slot.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startDrag(e.touches[0], index);
+                }, { passive: false });
+                
+                container.appendChild(slot);
+            });
+        }
+
+        function createPieceElement(piece) {
+            const pieceEl = document.createElement('div');
+            pieceEl.className = 'piece';
+            pieceEl.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 1fr)`;
+            
+            piece.shape.forEach(row => {
+                row.forEach(cell => {
+                    const cellEl = document.createElement('div');
+                    cellEl.className = 'piece-cell';
+                    if (cell) {
+                        cellEl.classList.add('filled');
+                        cellEl.style.background = piece.color;
+                    } else {
+                        cellEl.style.background = 'transparent';
+                    }
+                    pieceEl.appendChild(cellEl);
+                });
+            });
+            
+            return pieceEl;
+        }
+
+        function getPieceCenter(shape) {
+            let minRow = shape.length, maxRow = -1;
+            let minCol = shape[0].length, maxCol = -1;
+            
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c]) {
+                        minRow = Math.min(minRow, r);
+                        maxRow = Math.max(maxRow, r);
+                        minCol = Math.min(minCol, c);
+                        maxCol = Math.max(maxCol, c);
+                    }
+                }
+            }
+            
+            return {
+                row: (minRow + maxRow) / 2,
+                col: (minCol + maxCol) / 2
+            };
+        }
+
+        function startDrag(e, index) {
+            game.draggingIndex = index;
+            game.draggingPiece = game.pieces[index];
+            
+            const center = getPieceCenter(game.draggingPiece.shape);
+            game.pieceOffset = center;
+            
+            const slots = document.querySelectorAll('.piece-slot');
+            slots[index].classList.add('dragging');
+            
+            createDraggingPiece(e);
+        }
+
+        function createDraggingPiece(e) {
+            const existing = document.querySelector('.dragging-piece');
+            if (existing) existing.remove();
+            
+            const pieceEl = createPieceElement(game.draggingPiece);
+            pieceEl.className = 'piece dragging-piece';
+            pieceEl.style.gridTemplateColumns = `repeat(${game.draggingPiece.shape[0].length}, 1fr)`;
+            pieceEl.style.left = (e.clientX || e.pageX) + 'px';
+            pieceEl.style.top = (e.clientY || e.pageY) + 'px';
+            
+            document.body.appendChild(pieceEl);
+            
+            // Add lifted class after a brief delay for smooth animation
+            requestAnimationFrame(() => {
+                pieceEl.classList.add('lifted');
+            });
+        }        
+        
+        document.addEventListener('mousemove', (e) => {
+            if (game.draggingPiece) {
+                const draggingEl = document.querySelector('.dragging-piece');
+                if (draggingEl) {
+                    draggingEl.style.left = e.clientX + 'px';
+                    draggingEl.style.top = e.clientY + 'px';
+                }
+                showPreview(e.clientX, e.clientY);
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (game.draggingPiece) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const draggingEl = document.querySelector('.dragging-piece');
+                if (draggingEl) {
+                    draggingEl.style.left = touch.pageX + 'px';
+                    draggingEl.style.top = touch.pageY + 'px';
+                }
+                showPreview(touch.pageX, touch.pageY);
+            }
+        }, { passive: false });
+
+        function showPreview(x, y) {
+            const gridEl = document.getElementById('grid');
+            const rect = gridEl.getBoundingClientRect();
+            
+            // Điều chỉnh Y dựa trên vị trí khối đã lift lên
+            const adjustedY = game.isMobile ? y - 120 : y - 120;
+            
+            if (x < rect.left || x > rect.right || adjustedY < rect.top || adjustedY > rect.bottom) {
+                clearPreview();
+                return;
+            }
+            
+            const cellSize = rect.width / GRID_SIZE;
+            
+            // Tính toán vị trí dựa trên tâm của khối gạch
+            const centerOffset = game.pieceOffset;
+            const adjustedX = x - (centerOffset.col * cellSize);
+            const finalY = adjustedY - (centerOffset.row * cellSize);
+            
+            const col = Math.round((adjustedX - rect.left) / cellSize);
+            const row = Math.round((finalY - rect.top) / cellSize);
+            
+            clearPreview();
+            
+            const valid = canPlace(game.draggingPiece.shape, row, col);
+            const cells = document.querySelectorAll('.cell');
+            
+            game.draggingPiece.shape.forEach((shapeRow, r) => {
+                shapeRow.forEach((cell, c) => {
+                    if (cell) {
+                        const gridRow = row + r;
+                        const gridCol = col + c;
+                        if (gridRow >= 0 && gridRow < GRID_SIZE && gridCol >= 0 && gridCol < GRID_SIZE) {
+                            const cellIndex = gridRow * GRID_SIZE + gridCol;
+                            cells[cellIndex].classList.add(valid ? 'preview' : 'invalid-preview');
+                            if (valid) {
+                                cells[cellIndex].style.background = game.draggingPiece.color;
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (valid) {
+                highlightWillClearLines(row, col);
+            }
+            
+            game.currentPreviewPos = { row, col, valid };
+        }
+
+        function highlightWillClearLines(row, col) {
+            const tempGrid = game.grid.map(r => [...r]);
+            
+            game.draggingPiece.shape.forEach((shapeRow, r) => {
+                shapeRow.forEach((cell, c) => {
+                    if (cell) {
+                        const gridRow = row + r;
+                        const gridCol = col + c;
+                        if (gridRow >= 0 && gridRow < GRID_SIZE && gridCol >= 0 && gridCol < GRID_SIZE) {
+                            tempGrid[gridRow][gridCol] = game.draggingPiece.color;
+                        }
+                    }
+                });
+            });
+
+            const cells = document.querySelectorAll('.cell');
+            
+            for (let r = 0; r < GRID_SIZE; r++) {
+                if (tempGrid[r].every(cell => cell)) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        cells[r * GRID_SIZE + c].classList.add('will-clear');
+                    }
+                }
+            }
+            
+            for (let c = 0; c < GRID_SIZE; c++) {
+                if (tempGrid.every(row => row[c])) {
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        cells[r * GRID_SIZE + c].classList.add('will-clear');
+                    }
+                }
+            }
+        }
+
+        function clearPreview() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('preview', 'invalid-preview', 'will-clear');
+            });
+            drawGrid();
+        }
+
+        document.addEventListener('mouseup', (e) => {
+            if (game.draggingPiece) {
+                tryPlacePiece();
+            }
+        });
+
+        document.addEventListener('touchend', (e) => {
+            if (game.draggingPiece) {
+                tryPlacePiece();
+            }
+        });
+
+        function tryPlacePiece() {
+            if (game.currentPreviewPos && game.currentPreviewPos.valid) {
+                const { row, col } = game.currentPreviewPos;
+                placePiece(game.draggingPiece, row, col);
+                game.pieces.splice(game.draggingIndex, 1);
+                
+                if (game.pieces.length === 0) {
+                    game.pieces = generateSmartPieces();
+                }
+                
+                drawPieces();
+                
+                if (!hasValidMoves()) {
+                    gameOver();
+                }
+            }
+            
+            endDrag();
+        }
+
+        function endDrag() {
+            const draggingEl = document.querySelector('.dragging-piece');
+            if (draggingEl) draggingEl.remove();
+            
+            document.querySelectorAll('.piece-slot').forEach(slot => {
+                slot.classList.remove('dragging');
+            });
+            
+            game.draggingPiece = null;
+            game.draggingIndex = -1;
+            game.currentPreviewPos = null;
+            clearPreview();
+        }
+
+        function placePiece(piece, row, col) {
+            piece.shape.forEach((shapeRow, r) => {
+                shapeRow.forEach((cell, c) => {
+                    if (cell) {
+                        game.grid[row + r][col + c] = piece.color;
+                    }
+                });
+            });
+            
+            const pieceSize = piece.shape.flat().filter(c => c).length;
+            game.score += pieceSize;
+            
+            checkAndClearLines();
+            updateScore();
+            drawGrid();
+        }
+
+        function checkAndClearLines() {
+            const rowsToClear = [];
+            const colsToClear = [];
+            
+            for (let r = 0; r < GRID_SIZE; r++) {
+                if (game.grid[r].every(cell => cell)) {
+                    rowsToClear.push(r);
+                }
+            }
+            
+            for (let c = 0; c < GRID_SIZE; c++) {
+                if (game.grid.every(row => row[c])) {
+                    colsToClear.push(c);
+                }
+            }
+            
+            if (rowsToClear.length > 0 || colsToClear.length > 0) {
+                // Show clearing animation
+                animateClearLines(rowsToClear, colsToClear, () => {
+                    // After animation, clear the data
+                    rowsToClear.forEach(r => {
+                        game.grid[r] = Array(GRID_SIZE).fill(null);
+                        game.score += 10;
+                    });
                     
-                    # Check game over
-                    if self.check_game_over():
-                        self.game_over = True
+                    colsToClear.forEach(c => {
+                        game.grid.forEach(row => row[c] = null);
+                        game.score += 10;
+                    });
                     
-                    # Redraw everything
-                    self.draw_all()
-    
-    def draw_all(self):
-        """Draw entire screen"""
-        # Clear screen
-        self.display.fillscreen(COLOR_BG)
-        
-        # Draw title and score
-        self.display.prints(10, 10, "BLOCK BLAST", COLOR_TEXT, COLOR_BG, 1)
-        self.display.prints(200, 10, "Score: " + str(self.score), COLOR_TEXT, COLOR_BG, 1)
-        
-        # Draw grid
-        self.draw_grid()
-        
-        # Draw pieces
-        self.draw_pieces()
-        
-        # Draw game over
-        if self.game_over:
-            self.display.prints(80, 110, "GAME OVER!", COLOR_RED, COLOR_BG, 2)
-            self.display.prints(60, 140, "Tap to restart", COLOR_TEXT, COLOR_BG, 1)
-    
-    def draw_grid(self):
-        """Draw game grid"""
-        for r in range(GRID_SIZE):
-            for c in range(GRID_SIZE):
-                x = GRID_X + c * CELL_SIZE
-                y = GRID_Y + r * CELL_SIZE
-                
-                # Determine cell color
-                if self.grid[r][c] != 0:
-                    color = self.grid[r][c]
-                else:
-                    color = COLOR_WHITE
-                
-                # Draw filled cell
-                self.display.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, color)
-                
-                # Draw border
-                self.display.drawLine(x, y, x + CELL_SIZE, y, COLOR_GRAY)
-                self.display.drawLine(x, y, x, y + CELL_SIZE, COLOR_GRAY)
-                self.display.drawLine(x + CELL_SIZE, y, x + CELL_SIZE, y + CELL_SIZE, COLOR_GRAY)
-                self.display.drawLine(x, y + CELL_SIZE, x + CELL_SIZE, y + CELL_SIZE, COLOR_GRAY)
-    
-    def draw_pieces(self):
-        """Draw piece previews"""
-        for i, piece in enumerate(self.pieces):
-            if piece['placed']:
-                continue
-            
-            x = PIECE_PREVIEW_X_START + i * PIECE_PREVIEW_SPACING
-            y = PIECE_PREVIEW_Y
-            
-            # Draw selection highlight
-            if i == self.selected_piece:
-                self.display.drawLine(x - 2, y - 2, x + PIECE_BOX_SIZE + 2, y - 2, COLOR_HIGHLIGHT)
-                self.display.drawLine(x - 2, y - 2, x - 2, y + PIECE_BOX_SIZE + 2, COLOR_HIGHLIGHT)
-                self.display.drawLine(x + PIECE_BOX_SIZE + 2, y - 2, x + PIECE_BOX_SIZE + 2, y + PIECE_BOX_SIZE + 2, COLOR_HIGHLIGHT)
-                self.display.drawLine(x - 2, y + PIECE_BOX_SIZE + 2, x + PIECE_BOX_SIZE + 2, y + PIECE_BOX_SIZE + 2, COLOR_HIGHLIGHT)
-            
-            # Draw box background
-            self.display.fillRect(x, y, PIECE_BOX_SIZE, PIECE_BOX_SIZE, COLOR_WHITE)
-            
-            # Draw box border
-            self.display.drawLine(x, y, x + PIECE_BOX_SIZE, y, COLOR_GRAY)
-            self.display.drawLine(x, y, x, y + PIECE_BOX_SIZE, COLOR_GRAY)
-            self.display.drawLine(x + PIECE_BOX_SIZE, y, x + PIECE_BOX_SIZE, y + PIECE_BOX_SIZE, COLOR_GRAY)
-            self.display.drawLine(x, y + PIECE_BOX_SIZE, x + PIECE_BOX_SIZE, y + PIECE_BOX_SIZE, COLOR_GRAY)
-            
-            # Draw shape
-            shape = piece['shape']
-            color = piece['color']
-            
-            # Center the shape
-            shape_h = len(shape)
-            shape_w = len(shape[0])
-            offset_x = (PIECE_BOX_SIZE - shape_w * PIECE_CELL_SIZE) // 2
-            offset_y = (PIECE_BOX_SIZE - shape_h * PIECE_CELL_SIZE) // 2
-            
-            for r in range(shape_h):
-                for c in range(shape_w):
-                    if shape[r][c]:
-                        bx = x + offset_x + c * PIECE_CELL_SIZE
-                        by = y + offset_y + r * PIECE_CELL_SIZE
-                        self.display.fillRect(bx, by, PIECE_CELL_SIZE - 2, PIECE_CELL_SIZE - 2, color)
-    
-    def reset_game(self):
-        """Reset game to initial state"""
-        self.grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-        self.score = 0
-        self.selected_piece = -1
-        self.game_over = False
-        self.generate_pieces()
-        self.draw_all()
-    
-    def run(self):
-        """Main game loop"""
-        print("Game started!")
-        last_touch_state = False
-        
-        while True:
-            # Check touch state
-            current_time = time.ticks_ms()
-            
-            if self.touch_pressed:
-                # Debounce - only process if enough time passed
-                if time.ticks_diff(current_time, self.last_touch_time) > 200:
-                    if not last_touch_state:  # New touch
-                        print(f"Touch at: {self.touch_x}, {self.touch_y}")
-                        
-                        if self.game_over:
-                            # Reset game on touch when game over
-                            self.reset_game()
-                        else:
-                            # Handle normal touch
-                            self.handle_touch(self.touch_x, self.touch_y)
-                        
-                        self.last_touch_time = current_time
-                        last_touch_state = True
-                
-                self.touch_pressed = False
-            else:
-                last_touch_state = False
-            
-            time.sleep_ms(50)
+                    const totalCleared = rowsToClear.length + colsToClear.length;
+                    if (totalCleared > 1) {
+                        game.score += totalCleared * 5;
+                        showCombo(totalCleared);
+                    }
+                    
+                    if (game.grid.every(row => row.every(cell => !cell))) {
+                        game.score += 100;
+                        showCombo('PERFECT');
+                    }
+                    
+                    updateScore();
+                    drawGrid();
+                });
+            } else {
+                updateScore();
+                drawGrid();
+            }
+        }
 
-# =====================================================
-# MAIN ENTRY POINT
-# =====================================================
+        function animateClearLines(rows, cols, callback) {
+            const cells = document.querySelectorAll('.cell');
+            const cellsToAnimate = new Set();
+            
+            // Collect all cells to animate
+            rows.forEach(r => {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    cellsToAnimate.add(r * GRID_SIZE + c);
+                }
+            });
+            
+            cols.forEach(c => {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    cellsToAnimate.add(r * GRID_SIZE + c);
+                }
+            });
+            
+            // Add clearing class with stagger effect
+            let delay = 0;
+            cellsToAnimate.forEach(index => {
+                setTimeout(() => {
+                    cells[index].classList.add('clearing');
+                }, delay);
+                delay += 20; // 20ms stagger between cells
+            });
+            
+            // Wait for animation to complete, then callback
+            setTimeout(() => {
+                cellsToAnimate.forEach(index => {
+                    cells[index].classList.remove('clearing');
+                });
+                callback();
+            }, 600 + (cellsToAnimate.size * 20));
+        }
 
-def main():
-    """Main entry point"""
-    print("=" * 40)
-    print("BLOCK BLAST for ESP32")
-    print("Parallel 8-bit Interface")
-    print("=" * 40)
-    
-    try:
-        game = BlockBlastGame()
-        game.run()
-    except KeyboardInterrupt:
-        print("\nGame stopped by user")
-    except Exception as e:
-        print(f"Error: {e}")
-        import sys
-        sys.print_exception(e)
+        function highlightClearedLines(rows, cols) {
+            const cells = document.querySelectorAll('.cell');
+            
+            rows.forEach(r => {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    cells[r * GRID_SIZE + c].classList.add('highlight');
+                }
+            });
+            
+            cols.forEach(c => {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    cells[r * GRID_SIZE + c].classList.add('highlight');
+                }
+            });
+            
+            setTimeout(() => {
+                cells.forEach(cell => cell.classList.remove('highlight'));
+            }, 400);
+        }
 
-if __name__ == "__main__":
-    main()
+        function showCombo(count) {
+            const combo = typeof count === 'number' ? COMBO_MESSAGES[Math.min(count, 6)] : count;
+            if (!combo) return;
+            
+            const effect = document.createElement('div');
+            effect.className = 'combo-effect';
+            effect.textContent = combo;
+            
+            document.body.appendChild(effect);
+            
+            setTimeout(() => effect.remove(), 1000);
+        }
+
+        function hasValidMoves() {
+            return canPlayWithPieces(game.pieces, game.grid);
+        }
+
+        function gameOver() {
+            document.getElementById('finalScore').textContent = game.score;
+            document.getElementById('gameOverOverlay').classList.add('show');
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = game.score;
+            if (game.score > game.highest) {
+                game.highest = game.score;
+                document.getElementById('highest').textContent = game.highest;
+                localStorage.setItem('blockBlastHighest', game.highest);
+            }
+        }
+
+        function restartGame() {
+            game.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+            game.score = 0;
+            game.pieces = generateSmartPieces();
+            game.draggingPiece = null;
+            game.draggingIndex = -1;
+            
+            document.getElementById('gameOverOverlay').classList.remove('show');
+            
+            updateScore();
+            drawGrid();
+            drawPieces();
+        }
+
+        // Load highest score from localStorage
+        const savedHighest = localStorage.getItem('blockBlastHighest');
+        if (savedHighest) {
+            game.highest = parseInt(savedHighest);
+        }
+
+        initGrid();
+        game.pieces = generateSmartPieces();
+        drawGrid();
+        drawPieces();
+        updateScore();
+    </script>
+</body>
+</html>
