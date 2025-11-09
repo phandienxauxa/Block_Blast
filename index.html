@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast - Tetris Classic</title>
+    <title>Block Blast - Minimalist</title>
     <style>
         * {
             margin: 0;
@@ -13,243 +13,237 @@
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 10px;
-            overflow: hidden;
+            padding: 15px;
+            color: #999;
             touch-action: pan-y;
         }
 
         .game-container {
-            background: rgba(15, 20, 35, 0.9);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 
-                        0 0 30px rgba(82, 183, 136, 0.1);
-            max-width: 500px;
+            background: #111;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 480px;
             width: 100%;
-            border: 2px solid rgba(82, 183, 136, 0.2);
+            border: 1px solid #1a1a1a;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #52b788;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(82, 183, 136, 0.5);
-            letter-spacing: 3px;
+            font-size: 14px;
+            font-weight: 400;
+            color: #666;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
         }
 
         .scores {
             display: flex;
-            justify-content: space-around;
-            gap: 15px;
-            margin-bottom: 15px;
+            justify-content: center;
+            gap: 40px;
         }
 
         .score-box {
-            background: rgba(82, 183, 136, 0.1);
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(82, 183, 136, 0.3);
-            color: #b7e4c7;
-            font-weight: bold;
-            flex: 1;
             text-align: center;
         }
 
         .score-label {
-            font-size: 11px;
-            opacity: 0.7;
+            font-size: 10px;
+            color: #444;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
         }
 
         .score-value {
-            font-size: 22px;
-            margin-top: 5px;
-            color: #52b788;
+            font-size: 28px;
+            font-weight: 300;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
         }
 
         .grid-container {
-            background: rgba(10, 15, 25, 0.8);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            position: relative;
-            border: 2px solid rgba(82, 183, 136, 0.15);
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            background: #0a0a0a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 25px;
+            border: 1px solid #1a1a1a;
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 3px;
+            gap: 4px;
             margin: 0 auto;
             max-width: 400px;
         }
 
         .cell {
             aspect-ratio: 1;
-            background: rgba(30, 40, 60, 0.5);
-            border-radius: 3px;
-            transition: all 0.2s ease;
-            border: 1px solid rgba(82, 183, 136, 0.1);
+            background: #151515;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
         }
 
         .cell.filled {
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3),
-                        0 0 5px rgba(82, 183, 136, 0.2);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .cell.preview {
-            opacity: 0.6;
-            border: 2px solid #52b788;
-            box-shadow: 0 0 10px rgba(82, 183, 136, 0.4);
+            opacity: 0.5;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .cell.invalid-preview {
-            opacity: 0.4;
-            border: 2px solid #e63946;
-            box-shadow: 0 0 10px rgba(230, 57, 70, 0.4);
-        }
-
-        .cell.highlight {
-            animation: pulse 0.5s ease-in-out;
-        }
-
-        @keyframes pulse {
-            0%, 100% { 
-                transform: scale(1); 
-                box-shadow: 0 0 5px rgba(82, 183, 136, 0.3);
-            }
-            50% { 
-                transform: scale(1.08); 
-                box-shadow: 0 0 20px rgba(82, 183, 136, 0.8);
-            }
+            opacity: 0.3;
+            background: #2a1515 !important;
+            border: 1px solid rgba(255, 100, 100, 0.2);
         }
 
         .cell.will-clear {
-            animation: willClear 0.8s ease-in-out infinite;
-            border-color: #52b788 !important;
+            animation: willClearMinimal 1s ease-in-out infinite;
         }
 
-        @keyframes willClear {
-            0%, 100% { 
-                box-shadow: 0 0 8px rgba(82, 183, 136, 0.4),
-                            inset 0 0 8px rgba(82, 183, 136, 0.2);
+        @keyframes willClearMinimal {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .cell.highlight {
+            animation: pulseMinimal 0.4s ease-out;
+        }
+
+        @keyframes pulseMinimal {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell.clearing {
+            animation: clearEffect 0.6s ease-out forwards;
+        }
+
+        @keyframes clearEffect {
+            0% {
+                transform: scale(1);
+                opacity: 1;
             }
-            50% { 
-                box-shadow: 0 0 15px rgba(82, 183, 136, 0.8),
-                            inset 0 0 12px rgba(82, 183, 136, 0.4);
-                border-color: #52b788;
+            40% {
+                transform: scale(1.2);
+                opacity: 0.8;
+                filter: brightness(1.5);
+            }
+            70% {
+                transform: scale(0.8);
+                opacity: 0.4;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
             }
         }
 
         .pieces-container {
             display: flex;
             justify-content: space-around;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
         }
 
         .piece-slot {
-            background: rgba(30, 40, 60, 0.6);
-            border-radius: 10px;
-            padding: 15px;
-            min-width: 100px;
-            min-height: 100px;
+            background: #0a0a0a;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 90px;
+            min-height: 90px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(82, 183, 136, 0.2);
+            transition: all 0.2s ease;
+            border: 1px solid #1a1a1a;
             flex: 1;
-            max-width: 140px;
         }
 
-        .piece-slot:hover {
-            transform: translateY(-3px);
-            border-color: rgba(82, 183, 136, 0.5);
-            box-shadow: 0 5px 15px rgba(82, 183, 136, 0.2);
+        .piece-slot:active {
+            transform: scale(0.95);
         }
 
         .piece-slot.dragging {
-            opacity: 0.3;
+            opacity: 0.2;
         }
 
         .piece {
             display: grid;
-            gap: 2px;
+            gap: 3px;
             pointer-events: none;
         }
 
         .piece-cell {
-            width: 20px;
-            height: 20px;
-            border-radius: 2px;
-            transition: all 0.2s ease;
-        }
-
-        .piece-cell.filled {
-            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4),
-                        0 0 3px rgba(82, 183, 136, 0.3);
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            transition: all 0.15s ease;
         }
 
         .dragging-piece {
             position: fixed;
             pointer-events: none;
             z-index: 1000;
-            transform: translate(-50%, -50%) scale(1.2);
+            transform: translate(-50%, -50%);
             opacity: 0.9;
-            filter: drop-shadow(0 0 10px rgba(82, 183, 136, 0.5));
             transition: none;
         }
 
-        .dragging-piece.mobile-offset {
-            transform: translate(-50%, calc(-50% - 80px)) scale(1.2);
+        .dragging-piece.lifted {
+            transform: translate(-50%, calc(-50% - 120px)) scale(1.15);
+        }
+
+        .dragging-piece .piece-cell {
+            width: 22px;
+            height: 22px;
         }
 
         .controls {
             display: flex;
-            gap: 10px;
             justify-content: center;
+            margin-bottom: 20px;
         }
 
         .btn {
-            background: linear-gradient(135deg, #52b788 0%, #40916c 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
+            background: #1a1a1a;
+            color: #999;
+            border: 1px solid #222;
+            padding: 12px 28px;
             border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
+            font-size: 11px;
+            font-weight: 400;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 1px;
-            border: 1px solid rgba(82, 183, 136, 0.3);
+            transition: all 0.2s ease;
+            font-family: inherit;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(82, 183, 136, 0.4);
-            background: linear-gradient(135deg, #40916c 0%, #2d6a4f 100%);
+            background: #222;
+            color: #ccc;
+            border-color: #2a2a2a;
         }
 
         .btn:active {
-            transform: translateY(0);
+            transform: scale(0.97);
         }
 
         .game-over-overlay {
@@ -258,12 +252,12 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 2000;
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.2s ease;
         }
 
         .game-over-overlay.show {
@@ -276,32 +270,28 @@
         }
 
         .game-over-content {
-            background: rgba(15, 20, 35, 0.95);
-            padding: 40px;
-            border-radius: 15px;
+            background: #111;
+            padding: 50px;
+            border-radius: 20px;
             text-align: center;
-            animation: slideUp 0.3s ease;
-            border: 2px solid rgba(82, 183, 136, 0.3);
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            border: 1px solid #1a1a1a;
         }
 
         .game-over-title {
-            font-size: 36px;
-            font-weight: bold;
-            color: #52b788;
-            margin-bottom: 20px;
-            text-shadow: 0 0 15px rgba(82, 183, 136, 0.6);
-            letter-spacing: 2px;
+            font-size: 16px;
+            font-weight: 400;
+            color: #666;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
         }
 
         .final-score {
-            font-size: 24px;
-            color: #b7e4c7;
-            margin-bottom: 20px;
+            font-size: 48px;
+            font-weight: 200;
+            color: #fff;
+            margin-bottom: 40px;
+            font-variant-numeric: tabular-nums;
         }
 
         .combo-effect {
@@ -309,75 +299,78 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 48px;
-            font-weight: bold;
-            color: #52b788;
-            background: rgba(10, 15, 25, 0.85);
+            font-size: 32px;
+            font-weight: 300;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
             padding: 20px 40px;
-            border-radius: 15px;
-            text-shadow: 0 0 20px rgba(82, 183, 136, 1),
-                         0 0 40px rgba(82, 183, 136, 0.8);
+            border-radius: 12px;
             pointer-events: none;
-            animation: comboAnim 1.2s ease-out forwards;
+            animation: comboMinimal 1s ease-out forwards;
             z-index: 2000;
-            letter-spacing: 3px;
-            border: 2px solid rgba(82, 183, 136, 0.5);
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8),
-                        0 0 20px rgba(82, 183, 136, 0.3);
+            letter-spacing: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        @keyframes comboAnim {
+        @keyframes comboMinimal {
             0% {
-                transform: translate(-50%, -50%) scale(0.3);
+                transform: translate(-50%, -50%) scale(0.8);
                 opacity: 0;
             }
-            30% {
+            20% {
                 opacity: 1;
-                transform: translate(-50%, -55%) scale(1.3);
             }
-            70% {
+            80% {
                 opacity: 1;
-                transform: translate(-50%, -65%) scale(1.1);
+                transform: translate(-50%, -60%) scale(1);
             }
             100% {
-                transform: translate(-50%, -80%) scale(1);
+                transform: translate(-50%, -70%) scale(1);
                 opacity: 0;
             }
         }
 
         .author {
             text-align: center;
-            margin-top: 15px;
-            color: #52b788;
-            font-size: 11px;
-            opacity: 0.5;
-            letter-spacing: 1px;
+            color: #333;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
-        .color-cyan { background: #2a9d8f; }
-        .color-blue { background: #457b9d; }
-        .color-orange { background: #e76f51; }
-        .color-yellow { background: #e9c46a; }
-        .color-green { background: #52b788; }
-        .color-purple { background: #7209b7; }
-        .color-red { background: #d62828; }
+        /* Vibrant color palette - Brighter version */
+        .color-1 { background: #4a7a9e; }
+        .color-2 { background: #5a9e7a; }
+        .color-3 { background: #9e7a5a; }
+        .color-4 { background: #7a5a9e; }
+        .color-5 { background: #9e5a7a; }
+        .color-6 { background: #5a7a9e; }
+        .color-7 { background: #7a9e5a; }
 
         @media (max-width: 480px) {
-            .title {
-                font-size: 22px;
+            .game-container {
+                padding: 20px;
             }
-            
-            .score-box {
-                padding: 8px 12px;
-            }
-            
-            .score-value {
-                font-size: 18px;
-            }
-            
+
             .piece-cell {
                 width: 16px;
                 height: 16px;
+            }
+
+            .dragging-piece .piece-cell {
+                width: 20px;
+                height: 20px;
+            }
+
+            .dragging-piece.lifted {
+                transform: translate(-50%, calc(-50% - 100px)) scale(1.1);
+            }
+        }
+
+        /* Touch feedback */
+        @media (hover: none) {
+            .piece-slot:active {
+                background: #151515;
             }
         }
     </style>
@@ -385,7 +378,7 @@
 <body>
     <div class="game-container">
         <div class="header">
-            <div class="title">BLOCK BLAST</div>
+            <div class="title">Block Blast</div>
             <div class="scores">
                 <div class="score-box">
                     <div class="score-label">Best</div>
@@ -405,29 +398,33 @@
         <div class="pieces-container" id="pieces"></div>
 
         <div class="controls">
-            <button class="btn" onclick="restartGame()">⟳ NEW GAME</button>
+            <button class="btn" onclick="restartGame()">New Game</button>
         </div>
 
         <div class="author">
-            Author: Duc Thien khong biet code HTML
+            Author: Duc Thien khong biet code HTML ^^
         </div>
     </div>
 
+
     <div class="game-over-overlay" id="gameOverOverlay">
         <div class="game-over-content">
-            <div class="game-over-title">GAME OVER</div>
-            <div class="final-score">
-                SCORE: <span id="finalScore">0</span>
-            </div>
-            <button class="btn" onclick="restartGame()">PLAY AGAIN</button>
+            <div class="game-over-title">Game Over</div>
+            <div class="final-score" id="finalScore">0</div>
+            <button class="btn" onclick="restartGame()">Play Again</button>
         </div>
     </div>
 
     <script>
         const GRID_SIZE = 8;
-        const TETRIS_COLORS = [
-            '#2a9d8f', '#457b9d', '#e76f51', '#e9c46a', 
-            '#52b788', '#7209b7', '#d62828'
+        const MINIMALIST_COLORS = [
+            '#4a7a9e', // Bright blue-grey
+            '#5a9e7a', // Bright green-grey
+            '#9e7a5a', // Bright brown-grey
+            '#7a5a9e', // Bright purple-grey
+            '#9e5a7a', // Bright rose-grey
+            '#5a7a9e', // Bright steel-grey
+            '#7a9e5a'  // Bright olive-grey
         ];
 
         const SHAPES = {
@@ -437,49 +434,47 @@
                 [[1], [1]]
             ],
             medium: [
-                [[1, 1, 1]],                    // thanh ngang 3 ô
-                [[1], [1], [1]],                // thanh dọc 3 ô
-                [[1, 1], [1, 1]],               // ô vuông 2x2
-                [[1, 0], [1, 1]],               // chữ L ngắn
-                [[1, 1], [1, 0]],               // chữ L ngắn ngược
-                [[1, 1], [0, 1]],               // chữ L ngắn ngược ngược
-                [[1, 1, 1], [1, 0, 0]],         // chữ L dài
-                [[1, 0, 0], [1, 1, 1]],         // chữ L dài ngược 
-                [[1, 1, 1], [0, 0, 1]],         // chữ L dài ngược 1
-                [[0, 1], [0, 1], [1, 1]],       // chữ L dài chuẩn
-                [[1, 0], [1, 0], [1, 1]],       // chữ L dài chuẩn 1
-                [[1, 1], [1, 0], [1, 0]],       // chữ L dài chuẩn ngược
+                [[1, 1, 1]],
+                [[1], [1], [1]],
+                [[1, 1], [1, 1]],
+                [[1, 0], [1, 1]],
+                [[1, 1], [1, 0]],
+                [[1, 1], [0, 1]],
+                [[1, 1, 1], [1, 0, 0]],
+                [[1, 0, 0], [1, 1, 1]],
+                [[1, 1, 1], [0, 0, 1]],
+                [[0, 1], [0, 1], [1, 1]],
+                [[1, 0], [1, 0], [1, 1]],
+                [[1, 1], [1, 0], [1, 0]],
             ],
             hard: [
-                [[1, 1, 1, 1]],                         // thanh dài 4 ô
-                [[1], [1], [1], [1]],                   // thanh dọc 4 ô
-                [[1, 1, 1], [0, 1, 0]],                 // tam giác hướng dưới
-                [[0, 1, 0], [1, 1, 1]],                 // tam giác hướng lên
-                [[0, 1], [1, 1], [0, 1]],               // tam giác bên trái
-                [[1, 1, 0], [0, 1, 1]],                 // bậc thang bên trái
-                [[0, 1, 1], [1, 1, 0]],                 // bậc thang bên phải
-                [[1, 0], [1, 1], [0, 1]],               // bậc thang hướng lên trên
-                [[0, 1], [1, 1], [1, 0]],               // bậc thang hướng lên trên ngược
-                [[1, 1, 1], [1, 1, 1]],                 // hình chữ nhật 2x3
-                [[1, 1], [1, 1], [1, 1]],               // hình chữ nhật 2x3 dựng đứng
-                [[1, 1, 1], [1, 0, 0], [1, 0, 0]],      // chữ L siêu dài ngược
-                [[1, 1, 1], [0, 0, 1], [0, 0, 1]],      // chữ L siêu dài ngược ngược
-                [[1, 1, 1, 1, 1]],                      // thanh dài 5 ô
-                [[1], [1], [1], [1], [1]],              // thanh dọc 5 ô
-                [[1, 0], [0, 1]],                       // chéo trái
-                [[0, 1], [1, 0]],                       // chéo phải
-                [[1, 1, 1], [1, 1, 1], [1, 1, 1]],      // ô vuông 3x3
-                [[1, 0, 0], [0, 1, 0], [0, 0, 1]],      // chéo trái dài 
-                [[0, 0, 1], [0, 1, 0], [1, 0, 0]],      // chéo phải dài
+                [[1, 1, 1, 1]],
+                [[1], [1], [1], [1]],
+                [[1, 1, 1], [0, 1, 0]],
+                [[0, 1, 0], [1, 1, 1]],
+                [[0, 1], [1, 1], [0, 1]],
+                [[1, 1, 0], [0, 1, 1]],
+                [[0, 1, 1], [1, 1, 0]],
+                [[1, 0], [1, 1], [0, 1]],
+                [[0, 1], [1, 1], [1, 0]],
+                [[1, 1, 1], [1, 1, 1]],
+                [[1, 1], [1, 1], [1, 1]],
+                [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+                [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+                [[1, 1, 1, 1, 1]],
+                [[1], [1], [1], [1], [1]],
+                [[1, 0], [0, 1]],
+                [[0, 1], [1, 0]],
+                [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
             ]
         };
 
         const COMBO_MESSAGES = {
-            2: { text: 'NICE!', color: '#52b788' },
-            3: { text: 'GREAT!', color: '#e9c46a' },
-            4: { text: 'EXCELLENT!', color: '#e76f51' },
-            5: { text: 'AMAZING!', color: '#7209b7' },
-            6: { text: 'INCREDIBLE!', color: '#d62828' }
+            2: 'NICE',
+            3: 'GREAT',
+            4: 'EXCELLENT',
+            5: 'AMAZING',
+            6: 'INCREDIBLE'
         };
 
         let game = {
@@ -489,7 +484,8 @@
             pieces: [],
             draggingPiece: null,
             draggingIndex: -1,
-            touchStartPos: null,
+            dragStartPos: null,
+            pieceOffset: null,
             isMobile: false
         };
 
@@ -522,7 +518,7 @@
                     cell.style.background = value;
                     cell.classList.add('filled');
                 } else {
-                    cell.style.background = 'rgba(30, 40, 60, 0.5)';
+                    cell.style.background = '#151515';
                     cell.classList.remove('filled');
                 }
                 cell.classList.remove('preview', 'invalid-preview', 'highlight');
@@ -587,7 +583,6 @@
                 const pieces = [];
                 
                 for (let i = 0; i < 3; i++) {
-                    // Tỷ lệ: Easy 15%, Medium 35%, Hard 50%
                     const rand = Math.random();
                     let difficulty;
                     if (rand < 0.15) {
@@ -600,7 +595,7 @@
                     
                     const shapeList = SHAPES[difficulty];
                     const shape = shapeList[Math.floor(Math.random() * shapeList.length)];
-                    const color = TETRIS_COLORS[Math.floor(Math.random() * TETRIS_COLORS.length)];
+                    const color = MINIMALIST_COLORS[Math.floor(Math.random() * MINIMALIST_COLORS.length)];
                     
                     pieces.push({ shape: JSON.parse(JSON.stringify(shape)), color, difficulty });
                 }
@@ -611,9 +606,9 @@
             }
             
             return [
-                { shape: [[1]], color: TETRIS_COLORS[0], difficulty: 'easy' },
-                { shape: [[1, 1]], color: TETRIS_COLORS[1], difficulty: 'easy' },
-                { shape: [[1], [1]], color: TETRIS_COLORS[2], difficulty: 'easy' }
+                { shape: [[1]], color: MINIMALIST_COLORS[0], difficulty: 'easy' },
+                { shape: [[1, 1]], color: MINIMALIST_COLORS[1], difficulty: 'easy' },
+                { shape: [[1], [1]], color: MINIMALIST_COLORS[2], difficulty: 'easy' }
             ];
         }
 
@@ -633,7 +628,7 @@
                 slot.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     startDrag(e.touches[0], index);
-                });
+                }, { passive: false });
                 
                 container.appendChild(slot);
             });
@@ -642,7 +637,7 @@
         function createPieceElement(piece) {
             const pieceEl = document.createElement('div');
             pieceEl.className = 'piece';
-            pieceEl.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 20px)`;
+            pieceEl.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 1fr)`;
             
             piece.shape.forEach(row => {
                 row.forEach(cell => {
@@ -661,10 +656,33 @@
             return pieceEl;
         }
 
+        function getPieceCenter(shape) {
+            let minRow = shape.length, maxRow = -1;
+            let minCol = shape[0].length, maxCol = -1;
+            
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c]) {
+                        minRow = Math.min(minRow, r);
+                        maxRow = Math.max(maxRow, r);
+                        minCol = Math.min(minCol, c);
+                        maxCol = Math.max(maxCol, c);
+                    }
+                }
+            }
+            
+            return {
+                row: (minRow + maxRow) / 2,
+                col: (minCol + maxCol) / 2
+            };
+        }
+
         function startDrag(e, index) {
             game.draggingIndex = index;
             game.draggingPiece = game.pieces[index];
-            game.touchStartPos = { x: e.clientX || e.pageX, y: e.clientY || e.pageY };
+            
+            const center = getPieceCenter(game.draggingPiece.shape);
+            game.pieceOffset = center;
             
             const slots = document.querySelectorAll('.piece-slot');
             slots[index].classList.add('dragging');
@@ -677,13 +695,8 @@
             if (existing) existing.remove();
             
             const pieceEl = createPieceElement(game.draggingPiece);
-            pieceEl.className = 'piece dragging-piece';
-            
-            if (game.isMobile) {
-                pieceEl.classList.add('mobile-offset');
-            }
-            
-            pieceEl.style.gridTemplateColumns = `repeat(${game.draggingPiece.shape[0].length}, 24px)`;
+            pieceEl.className = 'piece dragging-piece lifted';
+            pieceEl.style.gridTemplateColumns = `repeat(${game.draggingPiece.shape[0].length}, 1fr)`;
             pieceEl.style.left = (e.clientX || e.pageX) + 'px';
             pieceEl.style.top = (e.clientY || e.pageY) + 'px';
             
@@ -718,19 +731,23 @@
             const gridEl = document.getElementById('grid');
             const rect = gridEl.getBoundingClientRect();
             
-            // Nếu là mobile, offset Y lên trên để khớp với vị trí khối gạch hiển thị
-            if (game.isMobile) {
-                y = y - 80;
-            }
+            // Điều chỉnh Y dựa trên vị trí khối đã lift lên
+            const adjustedY = game.isMobile ? y - 120 : y - 120;
             
-            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            if (x < rect.left || x > rect.right || adjustedY < rect.top || adjustedY > rect.bottom) {
                 clearPreview();
                 return;
             }
             
             const cellSize = rect.width / GRID_SIZE;
-            const col = Math.floor((x - rect.left) / cellSize);
-            const row = Math.floor((y - rect.top) / cellSize);
+            
+            // Tính toán vị trí dựa trên tâm của khối gạch
+            const centerOffset = game.pieceOffset;
+            const adjustedX = x - (centerOffset.col * cellSize);
+            const finalY = adjustedY - (centerOffset.row * cellSize);
+            
+            const col = Math.round((adjustedX - rect.left) / cellSize);
+            const row = Math.round((finalY - rect.top) / cellSize);
             
             clearPreview();
             
@@ -756,6 +773,8 @@
             if (valid) {
                 highlightWillClearLines(row, col);
             }
+            
+            game.currentPreviewPos = { row, col, valid };
         }
 
         function highlightWillClearLines(row, col) {
@@ -801,31 +820,19 @@
 
         document.addEventListener('mouseup', (e) => {
             if (game.draggingPiece) {
-                tryPlacePiece(e.clientX, e.clientY);
+                tryPlacePiece();
             }
         });
 
         document.addEventListener('touchend', (e) => {
             if (game.draggingPiece) {
-                const touch = e.changedTouches[0];
-                tryPlacePiece(touch.pageX, touch.pageY);
+                tryPlacePiece();
             }
         });
 
-        function tryPlacePiece(x, y) {
-            const gridEl = document.getElementById('grid');
-            const rect = gridEl.getBoundingClientRect();
-            
-            // Offset Y cho mobile khi tính vị trí đặt
-            if (game.isMobile) {
-                y = y - 80;
-            }
-            
-            const cellSize = rect.width / GRID_SIZE;
-            const col = Math.floor((x - rect.left) / cellSize);
-            const row = Math.floor((y - rect.top) / cellSize);
-            
-            if (canPlace(game.draggingPiece.shape, row, col)) {
+        function tryPlacePiece() {
+            if (game.currentPreviewPos && game.currentPreviewPos.valid) {
+                const { row, col } = game.currentPreviewPos;
                 placePiece(game.draggingPiece, row, col);
                 game.pieces.splice(game.draggingIndex, 1);
                 
@@ -853,6 +860,7 @@
             
             game.draggingPiece = null;
             game.draggingIndex = -1;
+            game.currentPreviewPos = null;
             clearPreview();
         }
 
@@ -889,27 +897,73 @@
                 }
             }
             
-            rowsToClear.forEach(r => {
-                game.grid[r] = Array(GRID_SIZE).fill(null);
-                game.score += 10;
+            if (rowsToClear.length > 0 || colsToClear.length > 0) {
+                // Show clearing animation
+                animateClearLines(rowsToClear, colsToClear, () => {
+                    // After animation, clear the data
+                    rowsToClear.forEach(r => {
+                        game.grid[r] = Array(GRID_SIZE).fill(null);
+                        game.score += 10;
+                    });
+                    
+                    colsToClear.forEach(c => {
+                        game.grid.forEach(row => row[c] = null);
+                        game.score += 10;
+                    });
+                    
+                    const totalCleared = rowsToClear.length + colsToClear.length;
+                    if (totalCleared > 1) {
+                        game.score += totalCleared * 5;
+                        showCombo(totalCleared);
+                    }
+                    
+                    if (game.grid.every(row => row.every(cell => !cell))) {
+                        game.score += 100;
+                        showCombo('PERFECT');
+                    }
+                    
+                    updateScore();
+                    drawGrid();
+                });
+            } else {
+                updateScore();
+                drawGrid();
+            }
+        }
+
+        function animateClearLines(rows, cols, callback) {
+            const cells = document.querySelectorAll('.cell');
+            const cellsToAnimate = new Set();
+            
+            // Collect all cells to animate
+            rows.forEach(r => {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    cellsToAnimate.add(r * GRID_SIZE + c);
+                }
             });
             
-            colsToClear.forEach(c => {
-                game.grid.forEach(row => row[c] = null);
-                game.score += 10;
+            cols.forEach(c => {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    cellsToAnimate.add(r * GRID_SIZE + c);
+                }
             });
             
-            const totalCleared = rowsToClear.length + colsToClear.length;
-            if (totalCleared > 1) {
-                game.score += totalCleared * 5;
-                showCombo(totalCleared);
-                highlightClearedLines(rowsToClear, colsToClear);
-            }
+            // Add clearing class with stagger effect
+            let delay = 0;
+            cellsToAnimate.forEach(index => {
+                setTimeout(() => {
+                    cells[index].classList.add('clearing');
+                }, delay);
+                delay += 20; // 20ms stagger between cells
+            });
             
-            if (game.grid.every(row => row.every(cell => !cell))) {
-                game.score += 100;
-                showCombo('PERFECT!');
-            }
+            // Wait for animation to complete, then callback
+            setTimeout(() => {
+                cellsToAnimate.forEach(index => {
+                    cells[index].classList.remove('clearing');
+                });
+                callback();
+            }, 600 + (cellsToAnimate.size * 20));
         }
 
         function highlightClearedLines(rows, cols) {
@@ -929,21 +983,20 @@
             
             setTimeout(() => {
                 cells.forEach(cell => cell.classList.remove('highlight'));
-            }, 500);
+            }, 400);
         }
 
         function showCombo(count) {
-            const combo = typeof count === 'number' ? COMBO_MESSAGES[Math.min(count, 6)] : { text: count, color: '#52b788' };
+            const combo = typeof count === 'number' ? COMBO_MESSAGES[Math.min(count, 6)] : count;
             if (!combo) return;
             
             const effect = document.createElement('div');
             effect.className = 'combo-effect';
-            effect.textContent = combo.text;
-            effect.style.color = combo.color;
+            effect.textContent = combo;
             
             document.body.appendChild(effect);
             
-            setTimeout(() => effect.remove(), 1200);
+            setTimeout(() => effect.remove(), 1000);
         }
 
         function hasValidMoves() {
@@ -960,6 +1013,7 @@
             if (game.score > game.highest) {
                 game.highest = game.score;
                 document.getElementById('highest').textContent = game.highest;
+                localStorage.setItem('blockBlastHighest', game.highest);
             }
         }
 
@@ -975,6 +1029,12 @@
             updateScore();
             drawGrid();
             drawPieces();
+        }
+
+        // Load highest score from localStorage
+        const savedHighest = localStorage.getItem('blockBlastHighest');
+        if (savedHighest) {
+            game.highest = parseInt(savedHighest);
         }
 
         initGrid();
